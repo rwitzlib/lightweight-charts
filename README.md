@@ -1,4 +1,4 @@
-This code was implemented by ntf (https://github.com/ntf) to satisfy requests for multichart panes from https://github.com/tradingview/lightweight-charts/issues/50
+This code was implemented by [ntf](https://github.com/ntf) to satisfy requests for multichart panes from https://github.com/tradingview/lightweight-charts/issues/50
 
 <!-- markdownlint-disable no-inline-html first-line-h1 -->
 
