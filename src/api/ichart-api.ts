@@ -226,6 +226,14 @@ export interface IChartApi {
 	unsubscribeCrosshairMove(handler: MouseEventHandler): void;
 
 	/**
+	 * Move the crosshair to the specified position.
+	 * @param x - horizontal pixel coordinate
+	 * @param y - vertical pixel coordinate
+	 * @param visible - true for the crosshair to be visible, false for invisible
+	 */
+	setCrossHairXY(x: number, y: number, visible: boolean): void;
+
+	/**
 	 * Returns API to manipulate a price scale.
 	 *
 	 * @param priceScaleId - ID of the price scale.

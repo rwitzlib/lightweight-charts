@@ -696,7 +696,7 @@ export class ChartModel implements IDestroyable {
 		return this._serieses;
 	}
 
-	public setAndSaveCurrentPosition(x: Coordinate, y: Coordinate, pane: Pane): void {
+	public setAndSaveCurrentPosition(x: Coordinate, y: Coordinate, pane: Pane, fire: boolean = true): void {
 		this._crosshair.saveOriginCoord(x, y);
 		let price = NaN;
 		let index = this._timeScale.coordinateToIndex(x);
@@ -717,7 +717,10 @@ export class ChartModel implements IDestroyable {
 
 		this.cursorUpdate();
 		const paneIndex = this.getPaneIndex(pane);
-		this._crosshairMoved.fire(this._crosshair.appliedIndex(), { x, y, paneIndex });
+
+		if (fire) {
+			this._crosshairMoved.fire(this._crosshair.appliedIndex(), { x, y, paneIndex });
+		}
 	}
 
 	public clearCurrentPosition(): void {
