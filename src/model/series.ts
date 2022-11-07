@@ -74,6 +74,7 @@ export interface MarkerData {
 	price: BarPrice;
 	radius: number;
 	borderColor: string | null;
+	borderWidth: number;
 	backgroundColor: string;
 }
 
@@ -105,7 +106,7 @@ export class Series<T extends SeriesType = SeriesType> extends PriceDataSource i
 	private readonly _baseHorizontalLineView: SeriesHorizontalBaseLinePaneView = new SeriesHorizontalBaseLinePaneView(this);
 	private _paneView!: IUpdatablePaneView;
 	private readonly _lastPriceAnimationPaneView: SeriesLastPriceAnimationPaneView | null = null;
-	private _barColorerCache: SeriesBarColorer | null = null;
+	private _barColorerCache: SeriesBarColorer<T> | null = null;
 	private readonly _options: SeriesOptionsInternal<T>;
 	private _markers: readonly SeriesMarker<TimePoint>[] = [];
 	private _indexedMarkers: InternalSeriesMarker<TimePointIndex>[] = [];
@@ -198,7 +199,7 @@ export class Series<T extends SeriesType = SeriesType> extends PriceDataSource i
 		};
 	}
 
-	public barColorer(): SeriesBarColorer {
+	public barColorer(): SeriesBarColorer<T> {
 		if (this._barColorerCache !== null) {
 			return this._barColorerCache;
 		}
@@ -459,8 +460,9 @@ export class Series<T extends SeriesType = SeriesType> extends PriceDataSource i
 		const price = bar.value[PlotRowValueIndex.Close] as BarPrice;
 		const radius = this._markerRadius();
 		const borderColor = this._markerBorderColor();
+		const borderWidth = this._markerBorderWidth();
 		const backgroundColor = this._markerBackgroundColor(index);
-		return { price, radius, borderColor, backgroundColor };
+		return { price, radius, borderColor, borderWidth, backgroundColor };
 	}
 
 	public title(): string {
@@ -524,6 +526,17 @@ export class Series<T extends SeriesType = SeriesType> extends PriceDataSource i
 		}
 
 		return null;
+	}
+
+	private _markerBorderWidth(): number {
+		switch (this._seriesType) {
+			case 'Line':
+			case 'Area':
+			case 'Baseline':
+				return (this._options as (LineStyleOptions | AreaStyleOptions | BaselineStyleOptions)).crosshairMarkerBorderWidth;
+		}
+
+		return 0;
 	}
 
 	private _markerBackgroundColor(index: TimePointIndex): string {
