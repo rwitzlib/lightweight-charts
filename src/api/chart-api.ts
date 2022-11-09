@@ -228,7 +228,7 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
 		this._crosshairMovedDelegate.unsubscribe(handler);
 	}
 
-	public setCrossHairXY(x: number, y: number, visible: boolean): void{
+	public setCrossHair(x: number, y: number, visible: boolean): void {
 		this._chartWidget.paneWidgets()[0].setCrossHair(x, y, visible);
 	}
 

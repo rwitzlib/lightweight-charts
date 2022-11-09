@@ -279,8 +279,7 @@ export class PaneWidget implements IDestroyable, MouseEventHandlers {
 		}
 		this._onMouseEvent();
 
-		const paneIndex = this._model().getPaneIndex(ensureNotNull(this._state));  // JLW: see if can push paneIndex down into _fireClickedDelegate
-		this._fireClickedDelegate(event, paneIndex);
+		this._fireClickedDelegate(event);
 	}
 
 	public pressedMouseMoveEvent(event: MouseEventHandlerMouseEvent): void {
@@ -304,8 +303,7 @@ export class PaneWidget implements IDestroyable, MouseEventHandlers {
 		if (this._state === null) {
 			return;
 		}
-		const paneIndex = this._model().getPaneIndex(ensureNotNull(this._state));  // JLW: see if can push paneIndex down into _fireClickedDelegate
-		this._fireClickedDelegate(event, paneIndex);   
+		this._fireClickedDelegate(event);
 	}
 
 	public longTapEvent(event: MouseEventHandlerTouchEvent): void {
@@ -510,6 +508,29 @@ export class PaneWidget implements IDestroyable, MouseEventHandlers {
 		return this._rightPriceAxisWidget;
 	}
 
+	public setCrossHair(x: number, y: number, visible: boolean): void {
+		if (!this._state) {
+			return;
+		}
+		if (visible) {
+			const xCoord = x as Coordinate;
+			const yCoord = y as Coordinate;
+
+			// if (!mobileTouch) {
+			this._setCrosshairPositionNoFire(xCoord, yCoord);
+			// }
+		} else {
+			this._state.model().setHoveredSource(null);
+			// if (!isMobile) {
+			this._clearCrosshairPosition();
+			// }
+		}
+	}
+
+	private _setCrosshairPositionNoFire(x: Coordinate, y: Coordinate): void {
+		this._model().setAndSaveCurrentPosition(this._correctXCoord(x), this._correctYCoord(y), ensureNotNull(this._state), false);
+	}
+
 	private _onStateDestroyed(): void {
 		if (this._state !== null) {
 			this._state.onDestroyed().unsubscribeAll(this);
@@ -518,11 +539,12 @@ export class PaneWidget implements IDestroyable, MouseEventHandlers {
 		this._state = null;
 	}
 
-	private _fireClickedDelegate(event: MouseEventHandlerEventBase, paneIndex): void {
+	private _fireClickedDelegate(event: MouseEventHandlerEventBase): void {
 		const x = event.localX;
 		const y = event.localY;
 
 		if (this._clicked.hasListeners()) {
+			const paneIndex = this._model().getPaneIndex(ensureNotNull(this._state));
 			this._clicked.fire(this._model().timeScale().coordinateToIndex(x), { x, y, paneIndex });
 		}
 	}
@@ -834,27 +856,4 @@ export class PaneWidget implements IDestroyable, MouseEventHandlers {
 
 		this._model().lightUpdate();
 	};
-
-	public setCrossHair(xx: number, yy: number, visible: boolean): void {
-		if (!this._state) {
-			return;
-		}
-		if (visible){
-			const x = xx as Coordinate;
-			const y = yy as Coordinate;
-	
-			// if (!mobileTouch) {
-				this._setCrosshairPositionNoFire(x, y);
-			// }
-		}else{
-			this._state.model().setHoveredSource(null);
-			// if (!isMobile) {
-				this._clearCrosshairPosition();
-			// }
-		}
-	}
-
-	private _setCrosshairPositionNoFire(x: Coordinate, y: Coordinate): void {
-		this._model().setAndSaveCurrentPosition(this._correctXCoord(x), this._correctYCoord(y), ensureNotNull(this._state), false);
-	}
 }
