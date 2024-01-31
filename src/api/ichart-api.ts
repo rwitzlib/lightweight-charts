@@ -2,7 +2,6 @@ import { DeepPartial } from '../helpers/strict-type-checks';
 
 import { ChartOptions } from '../model/chart-model';
 import { Point } from '../model/point';
-import { SeriesMarker } from '../model/series-markers';
 import {
 	AreaSeriesPartialOptions,
 	BarSeriesPartialOptions,
@@ -13,6 +12,7 @@ import {
 	SeriesType,
 } from '../model/series-options';
 import { Logical, Time } from '../model/time-data';
+import { TouchMouseEventData } from '../model/touch-mouse-event-data';
 
 import { BarData, HistogramData, LineData } from './data-consumer';
 import { IPriceScaleApi } from './iprice-scale-api';
@@ -55,9 +55,13 @@ export interface MouseEventParams {
 	 */
 	hoveredSeries?: ISeriesApi<SeriesType>;
 	/**
-	 * The ID of the marker at the point of the mouse event.
+	 * The ID of the object at the point of the mouse event.
 	 */
-	hoveredMarkerId?: SeriesMarker<Time>['id'];
+	hoveredObjectId?: unknown;
+	/**
+	 * The underlying source mouse or touch event data, if available
+	 */
+	sourceEvent?: TouchMouseEventData;
 }
 
 /**
@@ -224,15 +228,6 @@ export interface IChartApi {
 	 * ```
 	 */
 	unsubscribeCrosshairMove(handler: MouseEventHandler): void;
-
-	/**
-	 * Move the crosshair to the specified position.
-	 *
-	 * @param x - horizontal pixel coordinate
-	 * @param y - vertical pixel coordinate
-	 * @param visible - true for the crosshair to be visible, false for invisible
-	 */
-	setCrossHair(x: number, y: number, visible: boolean): void;
 
 	/**
 	 * Returns API to manipulate a price scale.

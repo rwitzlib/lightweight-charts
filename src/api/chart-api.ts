@@ -228,10 +228,6 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
 		this._crosshairMovedDelegate.unsubscribe(handler);
 	}
 
-	public setCrossHair(x: number, y: number, visible: boolean): void {
-		this._chartWidget.paneWidgets()[0].setCrossHair(x, y, visible);
-	}
-
 	public priceScale(priceScaleId: string): IPriceScaleApi {
 		return new PriceScaleApi(this._chartWidget, priceScaleId);
 	}
@@ -310,8 +306,9 @@ export class ChartApi implements IChartApi, DataUpdatesConsumer<SeriesType> {
 			point: param.point,
 			paneIndex: param.paneIndex,
 			hoveredSeries,
-			hoveredMarkerId: param.hoveredObject,
+			hoveredObjectId: param.hoveredObject,
 			seriesData,
+			sourceEvent: param.touchMouseEventData,
 		};
 	}
 }
