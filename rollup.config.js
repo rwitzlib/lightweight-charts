@@ -1,6 +1,6 @@
-const terser = require('rollup-plugin-terser').terser;
 const nodeResolve = require('@rollup/plugin-node-resolve').default;
 const replace = require('@rollup/plugin-replace');
+const terser = require('@rollup/plugin-terser').default;
 const packageJson = require('./package.json');
 
 function getDevBuildMetadata() {
@@ -35,7 +35,7 @@ function getConfig(
 			banner: `
 /*!
  * @license
- * TradingView Lightweight Charts v${currentVersion}
+ * TradingView Lightweight Charts™ v${currentVersion}
  * Copyright (c) ${year} TradingView, Inc.
  * Licensed under Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
  */`.trim(),
