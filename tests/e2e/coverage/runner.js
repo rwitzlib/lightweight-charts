@@ -5,7 +5,7 @@ const path = require('path');
 
 const Mocha = require('mocha');
 
-const serveLocalFiles = require('../serve-local-files').serveLocalFiles;
+const serveLocalFiles = require('../serve-local-files.js').serveLocalFiles;
 
 const mochaConfig = require('../../../.mocharc.js');
 
@@ -53,7 +53,7 @@ function runMocha(closeServer) {
 	}
 
 	mocha.diff(mochaConfig.diff);
-	mocha.addFile(path.resolve(__dirname, './coverage.spec.ts'));
+	mocha.addFile(path.resolve(__dirname, './coverage-test-cases.ts'));
 
 	mocha.run(failures => {
 		if (closeServer !== null) {

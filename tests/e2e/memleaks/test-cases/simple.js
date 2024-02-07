@@ -1,43 +1,46 @@
-function nextBusinessDay(time) {
-	const d = new Date();
-	d.setUTCFullYear(time.year);
-	d.setUTCMonth(time.month - 1);
-	d.setUTCDate(time.day + 1);
-	d.setUTCHours(0, 0, 0, 0);
-	return {
-		year: d.getUTCFullYear(),
-		month: d.getUTCMonth() + 1,
-		day: d.getUTCDate(),
-	};
-}
-
-function businessDayToTimestamp(time) {
-	const d = new Date();
-	d.setUTCFullYear(time.year);
-	d.setUTCMonth(time.month - 1);
-	d.setUTCDate(time.day);
-	d.setUTCHours(0, 0, 0, 0);
-	return d.getTime() / 1000;
-}
-
-function generateData() {
-	const res = [];
-	let time = nextBusinessDay({ day: 1, month: 1, year: 2018 });
-	for (let i = 0; i < 500; ++i) {
-		time = nextBusinessDay(time);
-		res.push({
-			time: businessDayToTimestamp(time),
-			value: i,
+/** @type {import('@memlab/core/dist/lib/Types').IScenario} */
+const scenario = {
+	setup: async function(page) {
+		await page.addScriptTag({
+			url: 'library.js',
 		});
-	}
-	return res;
-}
+	},
+	action: async function(page) {
+		await page.evaluate(() => {
+			function generateData() {
+				const res = [];
+				const time = new Date(Date.UTC(2018, 0, 1, 0, 0, 0, 0));
+				for (let i = 0; i < 500; ++i) {
+					res.push({
+						time: time.getTime() / 1000,
+						value: i,
+					});
+					time.setUTCDate(time.getUTCDate() + 1);
+				}
+				return res;
+			}
+			window.chart = LightweightCharts.createChart(
+				document.getElementById('container')
+			);
+			const mainSeries = window.chart.addLineSeries({
+				priceFormat: {
+					minMove: 1,
+					precision: 0,
+				},
+			});
+			mainSeries.setData(generateData());
+		});
+	},
+	back: async function(page) {
+		await page.evaluate(() => {
+			if (window.chart) {
+				window.chart.remove();
+				delete window.chart;
+				delete window.LightweightCharts;
+			}
+		});
+	},
+};
 
-function runTestCase(container) {
-	const chart = LightweightCharts.createChart(container);
-
-	const mainSeries = chart.addAreaSeries();
-
-	mainSeries.setData(generateData());
-	return chart;
-}
+// eslint-disable-next-line no-undef
+exports.scenario = scenario;

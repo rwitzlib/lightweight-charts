@@ -1,6 +1,7 @@
 {
 	"extends": "../../tsconfig.composite.base.json",
 	"compilerOptions": {
+		"skipLibCheck": true,
 		"esModuleInterop": true,
 		"lib": [
 			"dom",
@@ -13,6 +14,9 @@
 		"./coverage/**/*.ts",
 		"./graphics/graphics-test-cases.ts",
 		"./graphics/helpers/**/*.ts",
-		"./memleaks/**/*.ts"
+		"./memleaks/**/*.ts",
+		"./interactions/**/*.ts",
+		"./helpers/**/*.ts",
+		"../../src/**/*.ts"
 	]
 }

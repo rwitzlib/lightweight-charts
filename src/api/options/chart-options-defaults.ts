@@ -12,6 +12,7 @@ import { watermarkOptionsDefaults } from './watermark-options-defaults';
 export const chartOptionsDefaults: ChartOptionsInternal = {
 	width: 0,
 	height: 0,
+	autoSize: false,
 	layout: layoutOptionsDefaults,
 	crosshair: crosshairOptionsDefaults,
 	grid: gridOptionsDefaults,
@@ -47,7 +48,10 @@ export const chartOptionsDefaults: ChartOptionsInternal = {
 			time: true,
 			price: true,
 		},
-		axisDoubleClickReset: true,
+		axisDoubleClickReset: {
+			time: true,
+			price: true,
+		},
 		mouseWheel: true,
 		pinch: true,
 	},
