@@ -827,10 +827,10 @@ export class ChartWidget<HorzScaleItem> implements IDestroyable, IChartWidgetBas
 
 	private _onPaneWidgetDblClicked(
 		time: TimePointIndex | null,
-		point: Point | null,
+		details: Point & PaneInfo | null,
 		event: TouchMouseEventData
 	): void {
-		this._dblClicked.fire(() => this._getMouseEventParamsImpl(time, point, event));
+		this._dblClicked.fire(() => this._getMouseEventParamsImpl(time, details, event));
 	}
 
 	private _onPaneWidgetCrosshairMoved(

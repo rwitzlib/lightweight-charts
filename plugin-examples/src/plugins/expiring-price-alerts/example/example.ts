@@ -12,6 +12,8 @@ const chart = createChart('chart', {
 	timeScale: {
 		secondsVisible: true,
 		timeVisible: true,
+		rightOffset: 20,
+		allowShiftVisibleRangeOnWhitespaceReplacement: true,
 	},
 });
 
@@ -23,10 +25,6 @@ const [initialData, realtimeUpdates] = [data.slice(0, 400), data.slice(400)];
 lineSeries.setData(initialData);
 
 const priceAlerts = new ExpiringPriceAlerts(lineSeries, { interval: 60 });
-
-const pos = chart.timeScale().scrollPosition();
-chart.timeScale().scrollToPosition(pos + 20, false);
-
 
 // The rest simulates updates and the user adding price alerts.
 
