@@ -1,14 +1,14 @@
 import { IDestroyable } from '../helpers/idestroyable';
 import { clamp } from '../helpers/mathex';
 
-import { ChartWidget } from './chart-widget';
+import { IChartWidgetBase } from './chart-widget';
 import { MouseEventHandler, MouseEventHandlers, TouchMouseEvent } from './mouse-event-handler';
 import { PaneWidget } from './pane-widget';
 
 export const SEPARATOR_HEIGHT = 1;
 
 export class PaneSeparator implements IDestroyable {
-	private readonly _chartWidget: ChartWidget;
+	private readonly _chartWidget: IChartWidgetBase;
 	private readonly _rowElement: HTMLTableRowElement;
 	private readonly _cell: HTMLTableCellElement;
 	private readonly _handle: HTMLDivElement | null;
@@ -25,7 +25,7 @@ export class PaneSeparator implements IDestroyable {
 	private _pixelStretchFactor: number = 0;
 	private _mouseActive: boolean = false;
 
-	public constructor(chartWidget: ChartWidget, topPaneIndex: number, bottomPaneIndex: number, disableResize: boolean) {
+	public constructor(chartWidget: IChartWidgetBase, topPaneIndex: number, bottomPaneIndex: number, disableResize: boolean) {
 		this._chartWidget = chartWidget;
 		this._paneA = chartWidget.paneWidgets()[topPaneIndex];
 		this._paneB = chartWidget.paneWidgets()[bottomPaneIndex];
@@ -128,12 +128,17 @@ export class PaneSeparator implements IDestroyable {
 	private _mouseDownEvent(event: TouchMouseEvent): void {
 		this._startY = event.pageY;
 		this._deltaY = 0;
-		this._totalHeight = this._paneA.getSize().height + this._paneB.getSize().height;
-		this._totalStretch = this._paneA.stretchFactor() + this._paneB.stretchFactor();
+		const totalHeight = this._paneA.getSize().height + this._paneB.getSize().height;
+		const totalStretch = this._paneA.stretchFactor() + this._paneB.stretchFactor();
+		this._totalHeight = totalHeight;
+		this._totalStretch = totalStretch;
 		this._minPaneHeight = 30;
-		this._maxPaneHeight = this._totalHeight - this._minPaneHeight;
-		this._pixelStretchFactor = this._totalStretch / this._totalHeight;
-		this._mouseActive = true;
+		this._maxPaneHeight = totalHeight - this._minPaneHeight;
+		this._pixelStretchFactor = totalStretch / totalHeight;
+
+		// Here for debugging purposes, trying to set the property directly was causing issues for some reason.
+		const asdf = this._totalHeight;
+		this._totalHeight = asdf;
 	}
 
 	private _pressedMouseMoveEvent(event: TouchMouseEvent): void {
@@ -163,7 +168,6 @@ export class PaneSeparator implements IDestroyable {
 		this._minPaneHeight = 0;
 		this._maxPaneHeight = 0;
 		this._pixelStretchFactor = 0;
-		this._mouseActive = false;
 		this._mouseLeaveEvent(event);
 	}
 }

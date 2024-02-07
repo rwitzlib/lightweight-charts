@@ -1,6 +1,6 @@
 import { ensureNotNull } from '../../helpers/assertions';
 
-import { Crosshair } from '../../model/crosshair';
+import { Crosshair, CrosshairMode } from '../../model/crosshair';
 import { Pane } from '../../model/pane';
 import { CrosshairRenderer, CrosshairRendererData } from '../../renderers/crosshair-renderer';
 import { IPaneRenderer } from '../../renderers/ipane-renderer';
@@ -36,7 +36,7 @@ export class CrosshairPaneView implements IPaneView {
 		this._validated.clear();
 	}
 
-	public renderer(height: number, width: number, pane: Pane): IPaneRenderer {
+	public renderer(pane: Pane): IPaneRenderer {
 		this._updateImpl(pane);
 		// TODO rendererData needs to be cached per pane.
 		/* if (!this._validated.get(pane)) {
@@ -62,6 +62,12 @@ export class CrosshairPaneView implements IPaneView {
 		const crosshairOptions = pane.model().options().crosshair;
 
 		const data = this._rendererData;
+
+		if (crosshairOptions.mode === CrosshairMode.Hidden) {
+			data.horzLine.visible = false;
+			data.vertLine.visible = false;
+			return;
+		}
 
 		data.horzLine.visible = visible && this._source.horzLineVisible(renderingPane);
 		data.vertLine.visible = visible && this._source.vertLineVisible();

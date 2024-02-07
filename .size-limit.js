@@ -4,21 +4,21 @@ module.exports = [
 	{
 		name: 'CJS',
 		path: 'dist/lightweight-charts.production.cjs',
-		limit: '44.4 KB',
+		limit: '47.78 KB',
 	},
 	{
 		name: 'ESM',
-		path: 'dist/lightweight-charts.esm.production.js',
-		limit: '45 KB',
+		path: 'dist/lightweight-charts.production.mjs',
+		limit: '47.72 KB',
 	},
 	{
 		name: 'Standalone-ESM',
 		path: 'dist/lightweight-charts.standalone.production.mjs',
-		limit: '46.0 KB',
+		limit: '49.44 KB',
 	},
 	{
 		name: 'Standalone',
 		path: 'dist/lightweight-charts.standalone.production.js',
-		limit: '45.55 KB',
+		limit: '49.48 KB',
 	},
 ];

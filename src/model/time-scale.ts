@@ -1,7 +1,4 @@
-import { DateFormatter } from '../formatters/date-formatter';
-import { DateTimeFormatter } from '../formatters/date-time-formatter';
-
-import { lowerbound } from '../helpers/algorithms';
+import { lowerBound } from '../helpers/algorithms';
 import { ensureNotNull } from '../helpers/assertions';
 import { Delegate } from '../helpers/delegate';
 import { ISubscription } from '../helpers/isubscription';
@@ -10,25 +7,25 @@ import { DeepPartial, isInteger, merge } from '../helpers/strict-type-checks';
 
 import { ChartModel } from './chart-model';
 import { Coordinate } from './coordinate';
-import { defaultTickMarkFormatter } from './default-tick-mark-formatter';
 import { FormattedLabelsCache } from './formatted-labels-cache';
+import { IHorzScaleBehavior, InternalHorzScaleItem, InternalHorzScaleItemKey } from './ihorz-scale-behavior';
 import { LocalizationOptions } from './localization-options';
 import { areRangesEqual, RangeImpl } from './range-impl';
 import { TickMark, TickMarks } from './tick-marks';
 import {
 	Logical,
 	LogicalRange,
+	Range,
 	SeriesItemsIndexesRange,
-	TickMarkWeight,
-	Time,
+	TickMarkWeightValue,
 	TimedValue,
-	TimePoint,
 	TimePointIndex,
 	TimePointsRange,
 	TimeScalePoint,
-	UTCTimestamp,
 } from './time-data';
 import { TimeScaleVisibleRange } from './time-scale-visible-range';
+
+const defaultTickMarkMaxCharacterLength = 8;
 
 const enum Constants {
 	DefaultAnimationDuration = 400,
@@ -41,63 +38,28 @@ interface TransitionState {
 	rightOffset: number;
 }
 
+/**
+ * Represents a tick mark on the horizontal (time) scale.
+ */
 export interface TimeMark {
+	/** Does time mark need to be aligned */
 	needAlignCoordinate: boolean;
+	/** Coordinate for the time mark */
 	coord: number;
+	/** Display label for the time mark */
 	label: string;
-	weight: TickMarkWeight;
+	/** Weight of the time mark */
+	weight: TickMarkWeightValue;
 }
 
-/**
- * Represents the type of a tick mark on the time axis.
- */
-export const enum TickMarkType {
-	/**
-	 * The start of the year (e.g. it's the first tick mark in a year).
-	 */
-	Year,
-	/**
-	 * The start of the month (e.g. it's the first tick mark in a month).
-	 */
-	Month,
-	/**
-	 * A day of the month.
-	 */
-	DayOfMonth,
-	/**
-	 * A time without seconds.
-	 */
-	// eslint-disable-next-line @typescript-eslint/no-shadow
-	Time,
-	/**
-	 * A time with seconds.
-	 */
-	TimeWithSeconds,
+export function markWithGreaterWeight(a: TimeMark, b: TimeMark): TimeMark {
+	return a.weight > b.weight ? a : b;
 }
-
-/**
- * The `TickMarkFormatter` is used to customize tick mark labels on the time scale.
- *
- * This function should return `time` as a string formatted according to `tickMarkType` type (year, month, etc) and `locale`.
- *
- * Note that the returned string should be the shortest possible value and should have no more than 8 characters.
- * Otherwise, the tick marks will overlap each other.
- *
- * If the formatter function returns `null` then the default tick mark formatter will be used as a fallback.
- *
- * @example
- * ```js
- * const customFormatter = (time, tickMarkType, locale) => {
- *     // your code here
- * };
- * ```
- */
-export type TickMarkFormatter = (time: Time, tickMarkType: TickMarkType, locale: string) => string | null;
 
 /**
  * Options for the time scale; the horizontal scale at the bottom of the chart that displays the time of data.
  */
-export interface TimeScaleOptions {
+export interface HorzScaleOptions {
 	/**
 	 * The margin space in bars from the right side of the chart.
 	 *
@@ -192,26 +154,64 @@ export interface TimeScaleOptions {
 	shiftVisibleRangeOnNewBar: boolean;
 
 	/**
-	 * Tick marks formatter can be used to customize tick marks labels on the time axis.
-	 *
-	 * @defaultValue `undefined`
-	 */
-	tickMarkFormatter?: TickMarkFormatter;
-
-	/**
 	 * Draw small vertical line on time axis labels.
 	 *
 	 * @defaultValue `false`
 	 */
 	ticksVisible: boolean;
+
+	/**
+	 * Maximum tick mark label length. Used to override the default 8 character maximum length.
+	 *
+	 * @defaultValue `undefined`
+	 */
+	tickMarkMaxCharacterLength?: number;
+	/**
+	 * Changes horizontal scale marks generation.
+	 * With this flag equal to `true`, marks of the same weight are either all drawn or none are drawn at all.
+	 */
+	uniformDistribution: boolean;
+
+	/**
+	 * Define a minimum height for the time scale.
+	 * Note: This value will be exceeded if the
+	 * time scale needs more space to display it's contents.
+	 *
+	 * Setting a minimum height could be useful for ensuring that
+	 * multiple charts positioned in a horizontal stack each have
+	 * an identical time scale height, or for plugins which
+	 * require a bit more space within the time scale pane.
+	 *
+	 * @defaultValue 0
+	 */
+	minimumHeight: number;
 }
 
-export class TimeScale {
-	private readonly _options: TimeScaleOptions;
-	private readonly _model: ChartModel;
-	private readonly _localizationOptions: LocalizationOptions;
+export interface ITimeScale {
+	marks(): TimeMark[] | null;
+	isEmpty(): boolean;
+	width(): number;
+	indexToTime(index: TimePointIndex): InternalHorzScaleItem | null;
+	indexToCoordinate(index: TimePointIndex): Coordinate;
+	visibleStrictRange(): RangeImpl<TimePointIndex> | null;
+	hasPoints(): boolean;
+	timeToIndex(time: InternalHorzScaleItem, findNearest: boolean): TimePointIndex | null;
 
-	private _dateTimeFormatter!: DateFormatter | DateTimeFormatter;
+	barSpacing(): number;
+	rightOffset(): number;
+
+	indexesToCoordinates<T extends TimedValue>(points: T[], visibleRange?: SeriesItemsIndexesRange): void;
+	indexToTimeScalePoint(index: TimePointIndex): TimeScalePoint | null;
+	formatDateTime(timeScalePoint: TimeScalePoint): string;
+	coordinateToIndex(x: Coordinate): TimePointIndex;
+
+	options(): Readonly<HorzScaleOptions>;
+}
+
+export class TimeScale<HorzScaleItem> implements ITimeScale {
+	private readonly _options: HorzScaleOptions;
+	private readonly _model: ChartModel<HorzScaleItem>;
+	private readonly _localizationOptions: LocalizationOptions<HorzScaleItem>;
 
 	private _width: number = 0;
 	private _baseIndexOrNull: TimePointIndex | null = null;
@@ -220,8 +220,8 @@ export class TimeScale {
 	private _barSpacing: number;
 	private _scrollStartPoint: Coordinate | null = null;
 	private _scaleStartPoint: Coordinate | null = null;
-	private readonly _tickMarks: TickMarks = new TickMarks();
-	private _formattedByWeight: Map<number, FormattedLabelsCache> = new Map();
+	private readonly _tickMarks: TickMarks<HorzScaleItem> = new TickMarks();
+	private _formattedByWeight: Map<number, FormattedLabelsCache<HorzScaleItem>> = new Map();
 
 	private _visibleRange: TimeScaleVisibleRange = TimeScaleVisibleRange.invalid();
 	private _visibleRangeInvalidated: boolean = true;
@@ -235,28 +235,34 @@ export class TimeScale {
 
 	private _labels: TimeMark[] = [];
 
-	public constructor(model: ChartModel, options: TimeScaleOptions, localizationOptions: LocalizationOptions) {
+	private readonly _horzScaleBehavior: IHorzScaleBehavior<HorzScaleItem>;
+
+	public constructor(model: ChartModel<HorzScaleItem>, options: HorzScaleOptions, localizationOptions: LocalizationOptions<HorzScaleItem>, horzScaleBehavior: IHorzScaleBehavior<HorzScaleItem>) {
 		this._options = options;
 		this._localizationOptions = localizationOptions;
 		this._rightOffset = options.rightOffset;
 		this._barSpacing = options.barSpacing;
 		this._model = model;
 
+		this._horzScaleBehavior = horzScaleBehavior;
+
 		this._updateDateTimeFormatter();
+
+		this._tickMarks.setUniformDistribution(options.uniformDistribution);
 	}
 
-	public options(): Readonly<TimeScaleOptions> {
+	public options(): Readonly<HorzScaleOptions> {
 		return this._options;
 	}
 
-	public applyLocalizationOptions(localizationOptions: DeepPartial<LocalizationOptions>): void {
+	public applyLocalizationOptions(localizationOptions: DeepPartial<LocalizationOptions<HorzScaleItem>>): void {
 		merge(this._localizationOptions, localizationOptions);
 
 		this._invalidateTickMarks();
 		this._updateDateTimeFormatter();
 	}
 
-	public applyOptions(options: DeepPartial<TimeScaleOptions>, localizationOptions?: DeepPartial<LocalizationOptions>): void {
+	public applyOptions(options: DeepPartial<HorzScaleOptions>, localizationOptions?: DeepPartial<LocalizationOptions<HorzScaleItem>>): void {
 		merge(this._options, options);
 
 		if (this._options.fixLeftEdge) {
@@ -285,11 +291,10 @@ export class TimeScale {
 
 		this._invalidateTickMarks();
 		this._updateDateTimeFormatter();
-
 		this._optionsApplied.fire();
 	}
 
-	public indexToTime(index: TimePointIndex): TimePoint | null {
+	public indexToTime(index: TimePointIndex): InternalHorzScaleItem | null {
 		return this._points[index]?.time ?? null;
 	}
 
@@ -297,20 +302,20 @@ export class TimeScale {
 		return this._points[index] ?? null;
 	}
 
-	public timeToIndex(time: TimePoint, findNearest: boolean): TimePointIndex | null {
+	public timeToIndex(time: InternalHorzScaleItem, findNearest: boolean): TimePointIndex | null {
 		if (this._points.length < 1) {
 			// no time points available
 			return null;
 		}
 
-		if (time.timestamp > this._points[this._points.length - 1].time.timestamp) {
+		if (this._horzScaleBehavior.key(time) > this._horzScaleBehavior.key(this._points[this._points.length - 1].time)) {
 			// special case
 			return findNearest ? this._points.length - 1 as TimePointIndex : null;
 		}
 
-		const index = lowerbound(this._points, time.timestamp, (a: TimeScalePoint, b: UTCTimestamp) => a.time.timestamp < b);
+		const index = lowerBound(this._points, this._horzScaleBehavior.key(time), (a: TimeScalePoint, b: InternalHorzScaleItemKey) => this._horzScaleBehavior.key(a.time) < b);
 
-		if (time.timestamp < this._points[index].time.timestamp) {
+		if (this._horzScaleBehavior.key(time) < this._horzScaleBehavior.key(this._points[index].time)) {
 			return findNearest ? index as TimePointIndex : null;
 		}
 
@@ -319,6 +324,10 @@ export class TimeScale {
 
 	public isEmpty(): boolean {
 		return this._width === 0 || this._points.length === 0 || this._baseIndexOrNull === null;
+	}
+
+	public hasPoints(): boolean {
+		return this._points.length > 0;
 	}
 
 	// strict range: integer indices of the bars in the visible range rounded in more wide direction
@@ -351,15 +360,15 @@ export class TimeScale {
 		const to = Math.round(range.to);
 
 		const firstIndex = ensureNotNull(this._firstIndex());
-		const lastIndex = ensureNotNull(this._lastIndex());
+		const lastIndex = ensureNotNull(this.lastIndex());
 
 		return {
-			from: ensureNotNull(this.indexToTime(Math.max(firstIndex, from) as TimePointIndex) as TimePoint),
-			to: ensureNotNull(this.indexToTime(Math.min(lastIndex, to) as TimePointIndex) as TimePoint),
+			from: ensureNotNull(this.indexToTimeScalePoint(Math.max(firstIndex, from) as TimePointIndex)),
+			to: ensureNotNull(this.indexToTimeScalePoint(Math.min(lastIndex, to) as TimePointIndex)),
 		};
 	}
 
-	public logicalRangeForTimeRange(range: TimePointsRange): LogicalRange {
+	public logicalRangeForTimeRange(range: Range<InternalHorzScaleItem>): LogicalRange {
 		return {
 			from: ensureNotNull(this.timeToIndex(range.from, true)) as number as Logical,
 			to: ensureNotNull(this.timeToIndex(range.to, true)) as number as Logical,
@@ -481,7 +490,9 @@ export class TimeScale {
 		const spacing = this._barSpacing;
 		const fontSize = this._model.options().layout.fontSize;
 
-		const maxLabelWidth = (fontSize + 4) * 5;
+		const pixelsPer8Characters = (fontSize + 4) * 5;
+		const pixelsPerCharacter = pixelsPer8Characters / defaultTickMarkMaxCharacterLength;
+		const maxLabelWidth = pixelsPerCharacter * (this._options.tickMarkMaxCharacterLength || defaultTickMarkMaxCharacterLength);
 		const indexPerLabel = Math.round(maxLabelWidth / spacing);
 
 		const visibleBars = ensureNotNull(this.visibleStrictRange());
@@ -495,7 +506,7 @@ export class TimeScale {
 		const earliestIndexOfSecondLabel = (this._firstIndex() as number) + indexPerLabel;
 
 		// according to indexPerLabel value this value means "earliest index which _might be_ used as the second last label on time scale"
-		const indexOfSecondLastLabel = (this._lastIndex() as number) - indexPerLabel;
+		const indexOfSecondLastLabel = (this.lastIndex() as number) - indexPerLabel;
 
 		const isAllScalingAndScrollingDisabled = this._isAllScalingAndScrollingDisabled();
 		const isLeftEdgeFixed = this._options.fixLeftEdge || isAllScalingAndScrollingDisabled;
@@ -723,7 +734,7 @@ export class TimeScale {
 
 	public fitContent(): void {
 		const first = this._firstIndex();
-		const last = this._lastIndex();
+		const last = this.lastIndex();
 		if (first === null || last === null) {
 			return;
 		}
@@ -741,10 +752,14 @@ export class TimeScale {
 
 	public formatDateTime(timeScalePoint: TimeScalePoint): string {
 		if (this._localizationOptions.timeFormatter !== undefined) {
-			return this._localizationOptions.timeFormatter(timeScalePoint.originalTime as unknown as Time);
+			return this._localizationOptions.timeFormatter(timeScalePoint.originalTime as HorzScaleItem);
 		}
 
-		return this._dateTimeFormatter.format(new Date(timeScalePoint.time.timestamp * 1000));
+		return this._horzScaleBehavior.formatHorzItem(timeScalePoint.time);
+	}
+
+	public lastIndex(): TimePointIndex | null {
+		return this._points.length === 0 ? null : (this._points.length - 1) as TimePointIndex;
 	}
 
 	private _isAllScalingAndScrollingDisabled(): boolean {
@@ -761,10 +776,6 @@ export class TimeScale {
 
 	private _firstIndex(): TimePointIndex | null {
 		return this._points.length === 0 ? null : 0 as TimePointIndex;
-	}
-
-	private _lastIndex(): TimePointIndex | null {
-		return this._points.length === 0 ? null : (this._points.length - 1) as TimePointIndex;
 	}
 
 	private _rightOffsetForCoordinate(x: Coordinate): number {
@@ -893,9 +904,11 @@ export class TimeScale {
 	private _formatLabel(tickMark: TickMark): string {
 		let formatter = this._formattedByWeight.get(tickMark.weight);
 		if (formatter === undefined) {
-			formatter = new FormattedLabelsCache((mark: TickMark) => {
-				return this._formatLabelImpl(mark);
-			});
+			formatter = new FormattedLabelsCache(
+				(mark: TickMark) => {
+					return this._formatLabelImpl(mark);
+				},
+				this._horzScaleBehavior);
 
 			this._formattedByWeight.set(tickMark.weight, formatter);
 		}
@@ -904,20 +917,7 @@ export class TimeScale {
 	}
 
 	private _formatLabelImpl(tickMark: TickMark): string {
-		const tickMarkType = weightToTickMarkType(tickMark.weight, this._options.timeVisible, this._options.secondsVisible);
-
-		if (this._options.tickMarkFormatter !== undefined) {
-			const tickMarkString = this._options.tickMarkFormatter(
-				tickMark.originalTime as unknown as Time,
-				tickMarkType,
-				this._localizationOptions.locale
-			);
-			if (tickMarkString !== null) {
-				return tickMarkString;
-			}
-		}
-
-		return defaultTickMarkFormatter(tickMark.time, tickMarkType, this._localizationOptions.locale);
+		return this._horzScaleBehavior.formatTickmark(tickMark, this._localizationOptions);
 	}
 
 	private _setVisibleRange(newVisibleRange: TimeScaleVisibleRange): void {
@@ -946,18 +946,7 @@ export class TimeScale {
 	}
 
 	private _updateDateTimeFormatter(): void {
-		const dateFormat = this._localizationOptions.dateFormat;
-
-		if (this._options.timeVisible) {
-			this._dateTimeFormatter = new DateTimeFormatter({
-				dateFormat: dateFormat,
-				timeFormat: this._options.secondsVisible ? '%h:%m:%s' : '%h:%m',
-				dateTimeSeparator: '   ',
-				locale: this._localizationOptions.locale,
-			});
-		} else {
-			this._dateTimeFormatter = new DateFormatter(dateFormat, this._localizationOptions.locale);
-		}
+		this._horzScaleBehavior.updateFormatter(this._localizationOptions);
 	}
 
 	private _doFixLeftEdge(): void {
@@ -988,34 +977,5 @@ export class TimeScale {
 		this._correctOffset();
 
 		this._correctBarSpacing();
-	}
-}
-
-// eslint-disable-next-line complexity
-function weightToTickMarkType(weight: TickMarkWeight, timeVisible: boolean, secondsVisible: boolean): TickMarkType {
-	switch (weight) {
-		case TickMarkWeight.LessThanSecond:
-		case TickMarkWeight.Second:
-			return timeVisible
-				? (secondsVisible ? TickMarkType.TimeWithSeconds : TickMarkType.Time)
-				: TickMarkType.DayOfMonth;
-
-		case TickMarkWeight.Minute1:
-		case TickMarkWeight.Minute5:
-		case TickMarkWeight.Minute30:
-		case TickMarkWeight.Hour1:
-		case TickMarkWeight.Hour3:
-		case TickMarkWeight.Hour6:
-		case TickMarkWeight.Hour12:
-			return timeVisible ? TickMarkType.Time : TickMarkType.DayOfMonth;
-
-		case TickMarkWeight.Day:
-			return TickMarkType.DayOfMonth;
-
-		case TickMarkWeight.Month:
-			return TickMarkType.Month;
-
-		case TickMarkWeight.Year:
-			return TickMarkType.Year;
 	}
 }
