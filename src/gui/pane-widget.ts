@@ -601,24 +601,6 @@ export class PaneWidget implements IDestroyable, MouseEventHandlers {
 		}
 	}
 
-	// private _hitTestPaneView(paneViews: readonly IPaneView[], x: Coordinate, y: Coordinate): HitTestPaneViewResult | null {
-	// 	const state = ensureNotNull(this._state);
-	// 	for (const paneView of paneViews) {
-	// 		const renderer = paneView.renderer(state);
-	// 		if (renderer !== null && renderer.hitTest) {
-	// 			const result = renderer.hitTest(x, y);
-	// 			if (result !== null) {
-	// 				return {
-	// 					view: paneView,
-	// 					object: result,
-	// 				};
-	// 			}
-	// 		}
-	// 	}
-
-	// 	return null;
-	// }
-
 	private _recreatePriceAxisWidgets(): void {
 		if (this._state === null) {
 			return;
