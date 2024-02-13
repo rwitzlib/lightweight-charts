@@ -443,7 +443,7 @@ export class MouseEventHandler implements IDestroyable {
 	}
 
 	private _mouseUpHandler(mouseUpEvent: MouseEvent): void {
-		if (mouseUpEvent.button !== MouseEventButton.Left) {
+		if (mouseUpEvent.button !== MouseEventButton.Left && mouseUpEvent.button !== MouseEventButton.Right) {
 			return;
 		}
 
@@ -541,7 +541,7 @@ export class MouseEventHandler implements IDestroyable {
 	}
 
 	private _mouseDownHandler(downEvent: MouseEvent): void {
-		if (downEvent.button !== MouseEventButton.Left) {
+		if (downEvent.button !== MouseEventButton.Left && downEvent.button !== MouseEventButton.Right) {
 			return;
 		}
 
@@ -810,6 +810,9 @@ export class MouseEventHandler implements IDestroyable {
 
 			target: eventLike.target,
 			view: event.view,
+
+			// added by rwitzlib - feel free to remove
+			button: (event as MouseEvent).button,
 
 			preventDefault: () => {
 				if (event.type !== 'touchstart') {

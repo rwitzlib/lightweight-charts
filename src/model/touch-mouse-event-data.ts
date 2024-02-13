@@ -57,4 +57,9 @@ export interface TouchMouseEventData {
 	 * Windows keyboards, the Windows key (⊞)) was active when the key event was generated.
 	 */
 	readonly metaKey: boolean;
+	/**
+	 * Returns the button type that was pressed: Left, Right, Middle, etc.
+	 * - added by rwitzlib 02/12/2024
+	 */
+	readonly button: number;
 }
